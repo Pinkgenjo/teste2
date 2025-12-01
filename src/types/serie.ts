@@ -1,21 +1,10 @@
 export interface Serie {
   id?: number
-  titulo: string
-  numeroTemporadas: number
-  dataLancamentoTemporada: string
-  diretor: string
-  produtora: string
-  categoria: string
-  dataAssistiu: string
+  title: string
+  seasons: number
+  releaseDate: string
+  director: string
+  production: string
+  category: string
+  watchedAt: string
 }
-
-export interface SerieFormData {
-  titulo: string
-  numeroTemporadas: number
-  dataLancamentoTemporada: string
-  diretor: string
-  produtora: string
-  categoria: string
-  dataAssistiu: string
-}
-

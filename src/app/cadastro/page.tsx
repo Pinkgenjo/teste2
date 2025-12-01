@@ -2,198 +2,178 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
 import {
   Container,
   Paper,
-  Typography,
   TextField,
   Button,
+  Typography,
   Box,
-  Grid,
   Alert,
-  CircularProgress,
+  Snackbar
 } from '@mui/material'
-import { Save, ArrowBack } from '@mui/icons-material'
-import { useForm } from 'react-hook-form'
-import { SerieFormData } from '@/types/serie'
-import { serieService } from '@/services/api'
+import axios from 'axios'
+
+interface SerieForm {
+  title: string
+  seasons: number
+  releaseDate: string
+  director: string
+  production: string
+  category: string
+  watchedAt: string
+}
 
 export default function CadastroPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<SerieForm>()
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<SerieFormData>()
-
-  const onSubmit = async (data: SerieFormData) => {
+  const onSubmit = async (data: SerieForm) => {
     setLoading(true)
-    setError(null)
-    setSuccess(false)
-
+    setError('')
+    
     try {
-      await serieService.create(data)
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      await axios.post(`${apiUrl}/series`, {
+        ...data,
+        seasons: Number(data.seasons)
+      })
+      
       setSuccess(true)
       reset()
+      
       setTimeout(() => {
         router.push('/listagem')
-      }, 2000)
-    } catch (err: any) {
-      let errorMessage = 'Erro ao cadastrar série. Tente novamente.'
-      
-      if (err.isConnectionError) {
-        errorMessage = `Não foi possível conectar à API em ${err.apiUrl || 'http://localhost:3001'}. Verifique se a API está rodando.`
-      } else if (err.isTimeoutError) {
-        errorMessage = 'A requisição demorou muito para responder. Verifique se a API está acessível.'
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      } else if (err.message) {
-        errorMessage = err.message
-      }
-      
-      setError(errorMessage)
+      }, 1500)
+    } catch (err) {
+      setError('Erro ao cadastrar série. Tente novamente.')
+      console.error(err)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Cadastrar Nova Série
         </Typography>
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            Série cadastrada com sucesso! Redirecionando...
-          </Alert>
-        )}
-
+        
         <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Título *"
-                {...register('titulo', { required: 'Título é obrigatório' })}
-                error={!!errors.titulo}
-                helperText={errors.titulo?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Número de Temporadas *"
-                {...register('numeroTemporadas', {
-                  required: 'Número de temporadas é obrigatório',
-                  min: { value: 1, message: 'Deve ser pelo menos 1' },
-                  valueAsNumber: true,
-                })}
-                error={!!errors.numeroTemporadas}
-                helperText={errors.numeroTemporadas?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Data de Lançamento da Temporada *"
-                InputLabelProps={{ shrink: true }}
-                {...register('dataLancamentoTemporada', {
-                  required: 'Data de lançamento é obrigatória',
-                })}
-                error={!!errors.dataLancamentoTemporada}
-                helperText={errors.dataLancamentoTemporada?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Diretor *"
-                {...register('diretor', { required: 'Diretor é obrigatório' })}
-                error={!!errors.diretor}
-                helperText={errors.diretor?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Produtora *"
-                {...register('produtora', {
-                  required: 'Produtora é obrigatória',
-                })}
-                error={!!errors.produtora}
-                helperText={errors.produtora?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Categoria *"
-                {...register('categoria', {
-                  required: 'Categoria é obrigatória',
-                })}
-                error={!!errors.categoria}
-                helperText={errors.categoria?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Data em que Assistiu *"
-                InputLabelProps={{ shrink: true }}
-                {...register('dataAssistiu', {
-                  required: 'Data em que assistiu é obrigatória',
-                })}
-                error={!!errors.dataAssistiu}
-                helperText={errors.dataAssistiu?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<ArrowBack />}
-                  onClick={() => router.push('/listagem')}
-                  disabled={loading}
-                >
-                  Voltar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-                  disabled={loading}
-                >
-                  {loading ? 'Salvando...' : 'Salvar'}
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+          <TextField
+            fullWidth
+            label="Título"
+            margin="normal"
+            {...register('title', { required: 'Título é obrigatório' })}
+            error={!!errors.title}
+            helperText={errors.title?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Número de Temporadas"
+            type="number"
+            margin="normal"
+            {...register('seasons', { 
+              required: 'Número de temporadas é obrigatório',
+              min: { value: 1, message: 'Deve ter pelo menos 1 temporada' }
+            })}
+            error={!!errors.seasons}
+            helperText={errors.seasons?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Data de Lançamento"
+            type="date"
+            margin="normal"
+            InputLabelProps={{ shrink: true }}
+            {...register('releaseDate', { required: 'Data de lançamento é obrigatória' })}
+            error={!!errors.releaseDate}
+            helperText={errors.releaseDate?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Diretor"
+            margin="normal"
+            {...register('director', { required: 'Diretor é obrigatório' })}
+            error={!!errors.director}
+            helperText={errors.director?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Produtora"
+            margin="normal"
+            {...register('production', { required: 'Produtora é obrigatória' })}
+            error={!!errors.production}
+            helperText={errors.production?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Categoria"
+            margin="normal"
+            placeholder="Ex: Drama, Comédia, Ação"
+            {...register('category', { required: 'Categoria é obrigatória' })}
+            error={!!errors.category}
+            helperText={errors.category?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Data em que Assistiu"
+            type="date"
+            margin="normal"
+            InputLabelProps={{ shrink: true }}
+            {...register('watchedAt', { required: 'Data em que assistiu é obrigatória' })}
+            error={!!errors.watchedAt}
+            helperText={errors.watchedAt?.message}
+          />
+          
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              fullWidth
+            >
+              {loading ? 'Cadastrando...' : 'Cadastrar'}
+            </Button>
+            
+            <Button
+              variant="outlined"
+              onClick={() => router.push('/listagem')}
+              fullWidth
+            >
+              Cancelar
+            </Button>
+          </Box>
         </Box>
       </Paper>
+      
+      <Snackbar
+        open={success}
+        autoHideDuration={3000}
+        onClose={() => setSuccess(false)}
+      >
+        <Alert severity="success" sx={{ width: '100%' }}>
+          Série cadastrada com sucesso!
+        </Alert>
+      </Snackbar>
     </Container>
   )
 }
-

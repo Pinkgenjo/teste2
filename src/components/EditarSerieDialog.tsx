@@ -1,82 +1,72 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useForm } from 'react-hook-form'
 import {
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   TextField,
-  Grid,
-  Alert,
-  CircularProgress,
+  Button,
+  Box,
+  Alert
 } from '@mui/material'
-import { Save } from '@mui/icons-material'
-import { useForm } from 'react-hook-form'
-import { Serie, SerieFormData } from '@/types/serie'
-import { serieService } from '@/services/api'
+import axios from 'axios'
+import { Serie } from '@/types/serie'
 
 interface EditarSerieDialogProps {
+  serie: Serie
   open: boolean
   onClose: () => void
-  onSuccess: () => void
-  serie: Serie
 }
 
-export function EditarSerieDialog({
-  open,
-  onClose,
-  onSuccess,
-  serie,
-}: EditarSerieDialogProps) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+interface SerieForm {
+  title: string
+  seasons: number
+  releaseDate: string
+  director: string
+  production: string
+  category: string
+  watchedAt: string
+}
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<SerieFormData>()
+export default function EditarSerieDialog({ serie, open, onClose }: EditarSerieDialogProps) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  
+  const { register, handleSubmit, formState: { errors }, reset } = useForm<SerieForm>()
 
   useEffect(() => {
-    if (open && serie) {
+    if (serie) {
       reset({
-        titulo: serie.titulo,
-        numeroTemporadas: serie.numeroTemporadas,
-        dataLancamentoTemporada: serie.dataLancamentoTemporada,
-        diretor: serie.diretor,
-        produtora: serie.produtora,
-        categoria: serie.categoria,
-        dataAssistiu: serie.dataAssistiu,
+        title: serie.title,
+        seasons: serie.seasons,
+        releaseDate: serie.releaseDate,
+        director: serie.director,
+        production: serie.production,
+        category: serie.category,
+        watchedAt: serie.watchedAt
       })
     }
-  }, [open, serie, reset])
+  }, [serie, reset])
 
-  const onSubmit = async (data: SerieFormData) => {
-    if (!serie.id) return
-
+  const onSubmit = async (data: SerieForm) => {
     setLoading(true)
-    setError(null)
-
+    setError('')
+    
     try {
-      await serieService.update(serie.id, data)
-      onSuccess()
-    } catch (err: any) {
-      let errorMessage = 'Erro ao atualizar série. Tente novamente.'
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+      await axios.put(`${apiUrl}/series`, {
+        ...data,
+        id: serie.id,
+        seasons: Number(data.seasons)
+      })
       
-      if (err.isConnectionError) {
-        errorMessage = `Não foi possível conectar à API em ${err.apiUrl || 'http://localhost:3001'}. Verifique se a API está rodando.`
-      } else if (err.isTimeoutError) {
-        errorMessage = 'A requisição demorou muito para responder. Verifique se a API está acessível.'
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message
-      } else if (err.message) {
-        errorMessage = err.message
-      }
-      
-      setError(errorMessage)
+      onClose()
+    } catch (err) {
+      setError('Erro ao atualizar série. Tente novamente.')
+      console.error(err)
     } finally {
       setLoading(false)
     }
@@ -84,119 +74,102 @@ export function EditarSerieDialog({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogTitle>Editar Série</DialogTitle>
-        <DialogContent>
+      <DialogTitle>Editar Série</DialogTitle>
+      
+      <DialogContent>
+        <Box component="form" id="edit-form" onSubmit={handleSubmit(onSubmit)} sx={{ mt: 2 }}>
+          <TextField
+            fullWidth
+            label="Título"
+            margin="normal"
+            {...register('title', { required: 'Título é obrigatório' })}
+            error={!!errors.title}
+            helperText={errors.title?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Número de Temporadas"
+            type="number"
+            margin="normal"
+            {...register('seasons', { 
+              required: 'Número de temporadas é obrigatório',
+              min: { value: 1, message: 'Deve ter pelo menos 1 temporada' }
+            })}
+            error={!!errors.seasons}
+            helperText={errors.seasons?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Data de Lançamento"
+            type="date"
+            margin="normal"
+            InputLabelProps={{ shrink: true }}
+            {...register('releaseDate', { required: 'Data de lançamento é obrigatória' })}
+            error={!!errors.releaseDate}
+            helperText={errors.releaseDate?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Diretor"
+            margin="normal"
+            {...register('director', { required: 'Diretor é obrigatório' })}
+            error={!!errors.director}
+            helperText={errors.director?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Produtora"
+            margin="normal"
+            {...register('production', { required: 'Produtora é obrigatória' })}
+            error={!!errors.production}
+            helperText={errors.production?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Categoria"
+            margin="normal"
+            {...register('category', { required: 'Categoria é obrigatória' })}
+            error={!!errors.category}
+            helperText={errors.category?.message}
+          />
+          
+          <TextField
+            fullWidth
+            label="Data em que Assistiu"
+            type="date"
+            margin="normal"
+            InputLabelProps={{ shrink: true }}
+            {...register('watchedAt', { required: 'Data em que assistiu é obrigatória' })}
+            error={!!errors.watchedAt}
+            helperText={errors.watchedAt?.message}
+          />
+          
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ mt: 2 }}>
               {error}
             </Alert>
           )}
-
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Título *"
-                {...register('titulo', { required: 'Título é obrigatório' })}
-                error={!!errors.titulo}
-                helperText={errors.titulo?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="number"
-                label="Número de Temporadas *"
-                {...register('numeroTemporadas', {
-                  required: 'Número de temporadas é obrigatório',
-                  min: { value: 1, message: 'Deve ser pelo menos 1' },
-                  valueAsNumber: true,
-                })}
-                error={!!errors.numeroTemporadas}
-                helperText={errors.numeroTemporadas?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Data de Lançamento da Temporada *"
-                InputLabelProps={{ shrink: true }}
-                {...register('dataLancamentoTemporada', {
-                  required: 'Data de lançamento é obrigatória',
-                })}
-                error={!!errors.dataLancamentoTemporada}
-                helperText={errors.dataLancamentoTemporada?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Diretor *"
-                {...register('diretor', { required: 'Diretor é obrigatório' })}
-                error={!!errors.diretor}
-                helperText={errors.diretor?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Produtora *"
-                {...register('produtora', {
-                  required: 'Produtora é obrigatória',
-                })}
-                error={!!errors.produtora}
-                helperText={errors.produtora?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Categoria *"
-                {...register('categoria', {
-                  required: 'Categoria é obrigatória',
-                })}
-                error={!!errors.categoria}
-                helperText={errors.categoria?.message}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                type="date"
-                label="Data em que Assistiu *"
-                InputLabelProps={{ shrink: true }}
-                {...register('dataAssistiu', {
-                  required: 'Data em que assistiu é obrigatória',
-                })}
-                error={!!errors.dataAssistiu}
-                helperText={errors.dataAssistiu?.message}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            startIcon={loading ? <CircularProgress size={20} /> : <Save />}
-            disabled={loading}
-          >
-            {loading ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </DialogActions>
-      </form>
+        </Box>
+      </DialogContent>
+      
+      <DialogActions>
+        <Button onClick={onClose}>
+          Cancelar
+        </Button>
+        <Button 
+          type="submit" 
+          form="edit-form" 
+          variant="contained" 
+          disabled={loading}
+        >
+          {loading ? 'Salvando...' : 'Salvar'}
+        </Button>
+      </DialogActions>
     </Dialog>
   )
 }
-
